@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:contentDescription="@string/mudar_fundo"
-                android:onClick="iniciarMudarTemplate"
+                android:onClick="setViewTemplateActivity"
                 app:icon="@drawable/baseline_add_to_home_screen_24"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/button2"

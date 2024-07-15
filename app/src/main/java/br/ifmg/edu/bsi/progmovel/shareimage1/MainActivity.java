@@ -3,16 +3,22 @@ package br.ifmg.edu.bsi.progmovel.shareimage1;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.opengl.Matrix;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -25,6 +31,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia;
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly;
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.exifinterface.media.ExifInterface;
@@ -50,10 +57,33 @@ public class MainActivity extends AppCompatActivity {
 
         Bitmap imagemFundo = BitmapFactory.decodeResource(getResources(), R.drawable.fry_meme);
 
-        memeCreator = new MemeCreator("Olá Android!", "Texto de cima!", Color.WHITE, Color.WHITE,
+        memeCreator = new MemeCreator("Texto de baixo!", "Texto de cima!", Color.WHITE, Color.WHITE,
                 imagemFundo, getResources().getDisplayMetrics(), 64);
         mostrarImagem();
     }
+
+    // Mudança de template
+    public void setViewTemplateActivity(View view) {
+        Intent intent = new Intent(this, TemplateActivity.class);
+        changeTemplate.launch(intent);
+    }
+    private final ActivityResultLauncher<Intent> changeTemplate = registerForActivityResult(new StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent intent = result.getData();
+                        if (intent != null) {
+
+                            byte[] novoTemplate = intent.getByteArrayExtra(TemplateActivity.EXTRA_NOVO_TEMPLATE);
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(novoTemplate, 0, novoTemplate.length);
+
+                            memeCreator.setFundo(bitmap);
+                            mostrarImagem();
+                        }
+                    }
+                }
+            });
 
     // Mudança de textos
     public void iniciarMudarTexto(View v) {
