@@ -43,11 +43,11 @@ public class MemeCreator {
         int width = displayMetrics.widthPixels;
         int height = (int) (width * heightFactor);
 
-        // Set initial positions of the texts
+        // Setar as posições dos textos
         this.posicaoTextoCima = new PointF(width / 2, tamanhoFonte + 10);
         this.posicaoTextoBaixo = new PointF(width / 2, height - tamanhoFonte);
 
-        // Ensure the positions are within the image bounds
+        // Garantir que as posições dos textos estão dentro dos limites da imagem
         if (posicaoTextoCima.y < tamanhoFonte) {
             posicaoTextoCima.y = tamanhoFonte;
         }
@@ -56,7 +56,6 @@ public class MemeCreator {
         }
     }
 
-    // Getters e Setters para as posições dos textos
     public PointF getPosicaoTextoCima() {
         return posicaoTextoCima;
     }

@@ -35,7 +35,6 @@ import androidx.exifinterface.media.ExifInterface;
 
 import java.io.BufferedOutputStream;
 import java.io.FileDescriptor;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -90,19 +89,9 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Selecione o texto");
 
-        builder.setPositiveButton("Texto de cima", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                textoSelecionado = 1;
-            }
-        });
+        builder.setPositiveButton("Texto de cima", (dialog, which) -> textoSelecionado = 1);
 
-        builder.setNegativeButton("Texto de baixo", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                textoSelecionado = 2;
-            }
-        });
+        builder.setNegativeButton("Texto de baixo", (dialog, which) -> textoSelecionado = 2);
 
         AlertDialog dialog = builder.create();
         dialog.show();
