@@ -1,18 +1,22 @@
 package br.ifmg.edu.bsi.progmovel.shareimage1;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -23,8 +27,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia;
-import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly;
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.exifinterface.media.ExifInterface;
@@ -41,7 +45,9 @@ public class MainActivity extends AppCompatActivity {
 
     private ImageView imageView;
     private MemeCreator memeCreator;
+    private int textoSelecionado = 0; // 0 para nada, 1 para texto de cima, 2 para texto de baixo
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +59,53 @@ public class MainActivity extends AppCompatActivity {
         memeCreator = new MemeCreator("Texto de baixo!", "Texto de cima!", Color.WHITE, Color.WHITE,
                 imagemFundo, getResources().getDisplayMetrics(), 64);
         mostrarImagem();
+
+        // Adicionando o ouvinte de toque à imagem
+        imageView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                float x = event.getX();
+                float y = event.getY();
+
+                if (textoSelecionado == 0) {
+                    // Não há texto selecionado
+                    showTextSelectionDialog();
+                }
+                else if (textoSelecionado == 1) {
+                    // Texto de cima
+                    memeCreator.setPosicaoTextoCima(new PointF(x, y));
+                    textoSelecionado = 0;
+                } else if (textoSelecionado == 2) {
+                    // Texto de baixo
+                    memeCreator.setPosicaoTextoBaixo(new PointF(x, y));
+                    textoSelecionado = 0;
+                }
+                mostrarImagem();
+            }
+            return true;
+        });
+    }
+
+    // Seleção de texto
+    private void showTextSelectionDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Selecione o texto");
+
+        builder.setPositiveButton("Texto de cima", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                textoSelecionado = 1;
+            }
+        });
+
+        builder.setNegativeButton("Texto de baixo", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                textoSelecionado = 2;
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     // Mudança de template
@@ -60,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, TemplateActivity.class);
         changeTemplate.launch(intent);
     }
+
     private final ActivityResultLauncher<Intent> changeTemplate = registerForActivityResult(new StartActivityForResult(),
             new ActivityResultCallback<ActivityResult>() {
                 @Override
@@ -87,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
 
         startNovoTexto.launch(intent);
     }
+
     private final ActivityResultLauncher<Intent> startNovoTexto = registerForActivityResult(new StartActivityForResult(),
             new ActivityResultCallback<ActivityResult>() {
                 @Override
@@ -134,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+
     public void iniciarMudarCor(View v) {
         Intent intent = new Intent(this, NovaCorActivity.class);
         intent.putExtra(NovaCorActivity.EXTRA_COR_ATUAL_BAIXO, converterCor(memeCreator.getCorTextoBaixo()));
@@ -141,14 +197,21 @@ public class MainActivity extends AppCompatActivity {
 
         startNovaCor.launch(intent);
     }
+
     public String converterCor(int cor) {
         switch (cor) {
-            case Color.BLACK: return "BLACK";
-            case Color.WHITE: return "WHITE";
-            case Color.BLUE: return "BLUE";
-            case Color.GREEN: return "GREEN";
-            case Color.RED: return "RED";
-            case Color.YELLOW: return "YELLOW";
+            case Color.BLACK:
+                return "BLACK";
+            case Color.WHITE:
+                return "WHITE";
+            case Color.BLUE:
+                return "BLUE";
+            case Color.GREEN:
+                return "GREEN";
+            case Color.RED:
+                return "RED";
+            case Color.YELLOW:
+                return "YELLOW";
         }
         return null;
     }
@@ -180,9 +243,10 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
+
     public void iniciarMudarFundo(View v) {
         startImagemFundo.launch(new PickVisualMediaRequest.Builder()
-                .setMediaType(ImageOnly.INSTANCE)
+                .setMediaType(PickVisualMedia.ImageOnly.INSTANCE)
                 .build());
     }
 
@@ -197,59 +261,53 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onActivityResult(Boolean result) {
                     if (!result) {
-                        Toast.makeText(MainActivity.this, "Sem permissão de acesso a armazenamento do celular.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Sem permissão para salvar a imagem", Toast.LENGTH_SHORT).show();
                     } else {
-                        compartilhar(null);
+                        iniciarCompartilharImagem();
                     }
                 }
             });
-    public void compartilhar(View v) {
-        compartilharImagem(memeCreator.getImagem());
-    }
-    public void compartilharImagem(Bitmap bitmap) {
 
-        // pegar a uri da mediastore
-        // pego o volume externo pq normalmente ele é maior que o volume interno.
-        Uri contentUri;
+    public void iniciarCompartilharImagem() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            contentUri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            compartilharImagem();
         } else {
-            /*
-            Em versões <= 28, é preciso solicitar a permissão WRITE_EXTERNAL_STORAGE.
-            Mais detalhes em https://developer.android.com/training/data-storage/shared/media#java.
-             */
-            int write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            if (PackageManager.PERMISSION_GRANTED != write) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 startWriteStoragePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                return;
+            } else {
+                compartilharImagem();
             }
-            contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        }
+    }
+
+    private void compartilharImagem() {
+        String nomeArquivo = System.currentTimeMillis() + "_meme.jpg";
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, nomeArquivo);
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/memes");
+            contentValues.put(MediaStore.Images.Media.IS_PENDING, true);
         }
 
-        // montar a nova imagem a ser inserida na mediastore
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, "shareimage1file");
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
-        Uri imageUri = getContentResolver().insert(contentUri, values);
-
-        // criar a nova imagem na pasta da mediastore
-        try (
-                ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(imageUri, "w");
-                FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor())
-        ) {
-            BufferedOutputStream bytes = new BufferedOutputStream(fos);
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        Uri uri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+        try (BufferedOutputStream out = new BufferedOutputStream(getContentResolver().openOutputStream(uri))) {
+            memeCreator.getImagem().compress(Bitmap.CompressFormat.JPEG, 90, out);
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "Erro ao gravar imagem:\n" + e.getMessage(), Toast.LENGTH_LONG).show();
-            return;
+        }
+        contentValues.clear();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentValues.put(MediaStore.Images.Media.IS_PENDING, false);
+            getContentResolver().update(uri, contentValues, null, null);
         }
 
-        // compartilhar a imagem com intent implícito
-        Intent share = new Intent(Intent.ACTION_SEND);
-        share.setType("image/*");
-        share.putExtra(Intent.EXTRA_TITLE, "Seu meme fabuloso");
-        share.putExtra(Intent.EXTRA_STREAM, imageUri);
-        startActivity(Intent.createChooser(share, "Compartilhar Imagem"));
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_SEND);
+        intent.putExtra(Intent.EXTRA_STREAM, uri);
+        intent.setType("image/jpeg");
+
+        startActivity(Intent.createChooser(intent, "Compartilhar via: "));
     }
 }

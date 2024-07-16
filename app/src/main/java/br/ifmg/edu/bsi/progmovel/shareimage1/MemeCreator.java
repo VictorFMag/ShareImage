@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.PointF;
 import android.graphics.Typeface;
 import android.util.DisplayMetrics;
 
@@ -23,6 +24,10 @@ public class MemeCreator {
     private boolean dirty; // se true, significa que o meme precisa ser recriado.
     private float tamanhoFonte;
 
+    // Variáveis para as posições dos textos
+    private PointF posicaoTextoCima;
+    private PointF posicaoTextoBaixo;
+
     public MemeCreator(String textoBaixo, String textoCima, int corTextoBaixo, int corTextoCima, Bitmap fundo, DisplayMetrics displayMetrics, float tamanhoFonte) {
         this.textoBaixo = textoBaixo;
         this.textoCima = textoCima;
@@ -33,6 +38,41 @@ public class MemeCreator {
         this.meme = criarImagem();
         this.dirty = true;
         this.tamanhoFonte = tamanhoFonte;
+
+        float heightFactor = (float) fundo.getHeight() / fundo.getWidth();
+        int width = displayMetrics.widthPixels;
+        int height = (int) (width * heightFactor);
+
+        // Set initial positions of the texts
+        this.posicaoTextoCima = new PointF(width / 2, tamanhoFonte + 10);
+        this.posicaoTextoBaixo = new PointF(width / 2, height - tamanhoFonte);
+
+        // Ensure the positions are within the image bounds
+        if (posicaoTextoCima.y < tamanhoFonte) {
+            posicaoTextoCima.y = tamanhoFonte;
+        }
+        if (posicaoTextoBaixo.y > height - tamanhoFonte) {
+            posicaoTextoBaixo.y = height - tamanhoFonte;
+        }
+    }
+
+    // Getters e Setters para as posições dos textos
+    public PointF getPosicaoTextoCima() {
+        return posicaoTextoCima;
+    }
+
+    public void setPosicaoTextoCima(PointF posicaoTextoCima) {
+        this.posicaoTextoCima = posicaoTextoCima;
+        dirty = true;
+    }
+
+    public PointF getPosicaoTextoBaixo() {
+        return posicaoTextoBaixo;
+    }
+
+    public void setPosicaoTextoBaixo(PointF posicaoTextoBaixo) {
+        this.posicaoTextoBaixo = posicaoTextoBaixo;
+        dirty = true;
     }
 
     public float getTamanhoFonte() {
@@ -59,6 +99,7 @@ public class MemeCreator {
 
     public void setTextoCima(String textoCima) {
         this.textoCima = textoCima;
+        dirty = true;
     }
 
     public int getCorTextoBaixo() {
@@ -76,6 +117,7 @@ public class MemeCreator {
 
     public void setCorTextoCima(int corTextoCima) {
         this.corTextoCima = corTextoCima;
+        dirty = true;
     }
 
     public Bitmap getFundo() {
@@ -101,15 +143,22 @@ public class MemeCreator {
         }
         return meme;
     }
+
     protected Bitmap criarImagem() {
+        if (fundo == null || displayMetrics == null) {
+            return null;
+        }
+
         float heightFactor = (float) fundo.getHeight() / fundo.getWidth();
         int width = displayMetrics.widthPixels;
         int height = (int) (width * heightFactor);
+
         // nao deixa a imagem ocupar mais que 60% da altura da tela.
         if (height > displayMetrics.heightPixels * 0.6) {
             height = (int) (displayMetrics.heightPixels * 0.6);
             width = (int) (height * (1 / heightFactor));
         }
+
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
@@ -131,13 +180,16 @@ public class MemeCreator {
         paintTxtCima.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
         paintTxtCima.setTextAlign(Paint.Align.CENTER);
 
-        // desenhar texto em cima
-        canvas.drawText(textoCima, (width / 2.f), (height * 0.15f), paintTxtCima);
+        // desenhar texto em cima usando a posição definida
+        if (textoCima != null && posicaoTextoCima != null) {
+            canvas.drawText(textoCima, posicaoTextoCima.x, posicaoTextoCima.y, paintTxtCima);
+        }
 
-        // desenhar texto embaixo
-        canvas.drawText(textoBaixo, (width / 2.f), (height * 0.9f), paint);
+        // desenhar texto embaixo usando a posição definida
+        if (textoBaixo != null && posicaoTextoBaixo != null) {
+            canvas.drawText(textoBaixo, posicaoTextoBaixo.x, posicaoTextoBaixo.y, paint);
+        }
 
         return bitmap;
     }
-
 }
